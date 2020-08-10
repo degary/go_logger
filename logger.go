@@ -3,7 +3,6 @@ package logger
 import (
 	"fmt"
 	"os"
-	"time"
 )
 
 //2018/03/26 0:01.386 DEBUG logDebug.go:29 this is a debug log
@@ -51,28 +50,46 @@ func (f *FileLogger) SetLevel(level int) {
 }
 
 func (f *FileLogger) Debug(format string, args ...interface{}) {
+	if f.level > LogLevelDebug {
+		return
+	}
 	writeLog(f.file, LogLevelDebug, format, args...)
 }
 
 func (f *FileLogger) Trace(format string, args ...interface{}) {
+	if f.level > LogLevelTrace {
+		return
+	}
 	writeLog(f.file, LogLevelTrace, format, args...)
 
 }
 
 func (f *FileLogger) Info(format string, args ...interface{}) {
+	if f.level > LogLevelInfo {
+		return
+	}
 	writeLog(f.file, LogLevelInfo, format, args...)
 
 }
 
 func (f *FileLogger) Warn(format string, args ...interface{}) {
+	if f.level > LogLevelWarn {
+		return
+	}
 	writeLog(f.warnFile, LogLevelWarn, format, args...)
 }
 
 func (f *FileLogger) Error(format string, args ...interface{}) {
+	if f.level > LogLevelError {
+		return
+	}
 	writeLog(f.warnFile, LogLevelError, format, args...)
 }
 
 func (f *FileLogger) Fatal(format string, args ...interface{}) {
+	if f.level > LogLevelFatal {
+		return
+	}
 	writeLog(f.warnFile, LogLevelFatal, format, args...)
 }
 

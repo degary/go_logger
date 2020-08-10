@@ -21,9 +21,6 @@ func GetLineInfo() (fileName string, funcName string, lineNo int) {
 }
 
 func writeLog(file *os.File, level int, format string, args ...interface{}) {
-	if f.level > level {
-		return
-	}
 
 	now := time.Now()
 	//now.Format函数传入的时间点 必须是此时间,但是可以更改格式
