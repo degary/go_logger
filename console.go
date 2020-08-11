@@ -1,15 +1,26 @@
 package logger
 
-import "os"
+import (
+	"fmt"
+	"os"
+)
 
 type ConsoleLogger struct {
 	level int
 }
 
-func NewConsoleLogger(level int) LogInterface {
-	return &ConsoleLogger{
+func NewConsoleLogger(config map[string]string) (logger LogInterface, err error) {
+	logLevel, ok := config["log_level"]
+	if !ok {
+		err = fmt.Errorf("not found log_level")
+		return
+	}
+
+	level := getLogLevel(logLevel)
+	logger = &ConsoleLogger{
 		level: level,
 	}
+	return
 }
 
 func (c *ConsoleLogger) SetLevel(level int) {
@@ -62,5 +73,8 @@ func (c *ConsoleLogger) Fatal(format string, args ...interface{}) {
 }
 
 func (c *ConsoleLogger) Close() {
+
+}
+func (c *ConsoleLogger) init() {
 
 }

@@ -9,4 +9,5 @@ type LogInterface interface {
 	Error(format string, args ...interface{})
 	Fatal(format string, args ...interface{})
 	Close()
+	init()
 }

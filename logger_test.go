@@ -1,19 +1,31 @@
 package logger
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
-func TestFileLogger(t *testing.T) {
-	logger := NewFileLogger(LogLevelDebug, "D:\\logs\\", "test")
-	logger.Debug("user id[%d] is come from china ", 32334)
-	logger.Warn("test warn log")
-	logger.Fatal("test Fatal log")
-	logger.Close()
+func initLogger(name string, logPath, logName string, level string) {
+	config := make(map[string]string, 8)
+	config["log_path"] = logPath
+	config["log_name"] = logName
+	config["log_level"] = level
+	err := InitLogger(name, config)
+	//log = logger.NewConsoleLogger(level)
+	if err != nil {
+		return
+	}
+	Debug("init logger success")
+	return
+}
+func Run() {
+	for i := 0; i < 10; i++ {
+		Warn("user server is running")
+		time.Sleep(1 * time.Second)
+	}
 }
 
-func TestConsoleLogger(t *testing.T) {
-	logger := NewConsoleLogger(LogLevelDebug)
-	logger.Debug("user id[%d] is come from china ", 23333)
-	logger.Warn("test console warn log")
-	logger.Fatal("test console Fatal log")
-	logger.Close()
+func TestLogger(t *testing.T) {
+	initLogger("console", "F:\\log\\", "user_server", "debug")
+	Run()
 }
