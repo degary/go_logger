@@ -2,7 +2,6 @@ package logger
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"runtime"
 	"time"
@@ -20,7 +19,22 @@ func GetLineInfo() (fileName string, funcName string, lineNo int) {
 	return
 }
 
-func writeLog(file *os.File, level int, format string, args ...interface{}) {
+/*
+1.当业务调用打日志的方法时,我们把日志相关的数据写入chan队列
+2.然后后台启动一个线程,不短的从chan里获取这些日志,写入到文件里
+*/
+
+type LogData struct {
+	Message      string
+	TimeStr      string
+	LevelStr     string
+	FileName     string
+	FuncName     string
+	LineNo       int
+	WarnAndFatal bool
+}
+
+func writeLog(level int, format string, args ...interface{}) *LogData {
 
 	now := time.Now()
 	//now.Format函数传入的时间点 必须是此时间,但是可以更改格式
@@ -28,7 +42,20 @@ func writeLog(file *os.File, level int, format string, args ...interface{}) {
 	levelStr := getLevelText(level)
 	fileName, funcName, lineNo := GetLineInfo()
 	msg := fmt.Sprintf(format, args...)
-	fmt.Fprintf(file, "[%s] %s [%s:%s:%d] %s\n", nowStr, levelStr, fileName, funcName, lineNo, msg)
+	logData := &LogData{
+		Message:      msg,
+		TimeStr:      nowStr,
+		LevelStr:     levelStr,
+		FileName:     fileName,
+		FuncName:     funcName,
+		LineNo:       lineNo,
+		WarnAndFatal: false,
+	}
+	if level == LogLevelError || level == LogLevelWarn || level == LogLevelFatal {
+		logData.WarnAndFatal = true
+	}
+	return logData
+	//fmt.Fprintf(file, "[%s] %s [%s:%s:%d] %s\n", nowStr, levelStr, fileName, funcName, lineNo, msg)
 }
 
 func getLevelText(level int) string {

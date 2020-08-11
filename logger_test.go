@@ -20,12 +20,12 @@ func initLogger(name string, logPath, logName string, level string) {
 }
 func Run() {
 	for i := 0; i < 10; i++ {
-		Warn("user server is running")
+		Debug("user server is running")
 		time.Sleep(1 * time.Second)
 	}
 }
 
 func TestLogger(t *testing.T) {
-	initLogger("console", "F:\\log\\", "user_server", "debug")
+	initLogger("file", "F:\\log\\", "user_server", "debug")
 	Run()
 }
