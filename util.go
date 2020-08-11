@@ -30,3 +30,23 @@ func writeLog(file *os.File, level int, format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	fmt.Fprintf(file, "[%s] %s [%s:%s:%d] %s\n", nowStr, levelStr, fileName, funcName, lineNo, msg)
 }
+
+func getLevelText(level int) string {
+	switch level {
+	case LogLevelDebug:
+		return "DEBUG"
+	case LogLevelTrace:
+		return "TRACE"
+	case LogLevelInfo:
+		return "INFO"
+	case LogLevelWarn:
+		return "WARN"
+	case LogLevelError:
+		return "ERROR"
+	case LogLevelFatal:
+		return "FATAL"
+	default:
+		return "UNKNOW"
+
+	}
+}
