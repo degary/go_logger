@@ -10,6 +10,7 @@ func initLogger(name string, logPath, logName string, level string) {
 	config["log_path"] = logPath
 	config["log_name"] = logName
 	config["log_level"] = level
+	config["log_split_type"] = "Hour"
 	err := InitLogger(name, config)
 	//log = logger.NewConsoleLogger(level)
 	if err != nil {
@@ -19,9 +20,10 @@ func initLogger(name string, logPath, logName string, level string) {
 	return
 }
 func Run() {
-	for i := 0; i < 10; i++ {
-		Debug("user server is running")
+	for {
+		Debug("user server is running,test the func of split base on size")
 		time.Sleep(1 * time.Second)
+
 	}
 }
 

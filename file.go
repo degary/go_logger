@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 )
 
 //2018/03/26 0:01.386 DEBUG logDebug.go:29 this is a debug log
@@ -14,7 +15,10 @@ type FileLogger struct {
 	file     *os.File
 	warnFile *os.File
 	//chan中存放指针,会提高性能
-	LogDataChan chan *LogData
+	LogDataChan   chan *LogData
+	logSplitType  int
+	logSplitSize  int64
+	lastSplitHour int
 }
 
 func NewFileLogger(config map[string]string) (logger LogInterface, err error) {
@@ -42,16 +46,41 @@ func NewFileLogger(config map[string]string) (logger LogInterface, err error) {
 	if !ok {
 		logChanSize = "50000"
 	}
+
+	var logSplitType int = LogSplitTypeHour
+	var logSplitSize int64
+	logSplitStr, ok := config["log_split_type"]
+	if !ok {
+		logSplitStr = "Hour"
+	} else {
+		if logSplitStr == "Size" {
+			logSplitSizeStr, ok := config["log_split_size"]
+			if !ok {
+				logSplitSizeStr = "104857600"
+			}
+			logSplitSize, err = strconv.ParseInt(logSplitSizeStr, 10, 64)
+			if err != nil {
+				logSplitSize = 104857600
+			}
+			logSplitType = LogSplitTypeSize
+		} else {
+			logSplitType = LogSplitTypeHour
+		}
+	}
+
 	chanSize, err := strconv.Atoi(logChanSize)
 	if err != nil {
 		chanSize = 50000
 	}
 
 	logger = &FileLogger{
-		level:       level,
-		logPath:     logPath,
-		logName:     logName,
-		LogDataChan: make(chan *LogData, chanSize),
+		level:         level,
+		logPath:       logPath,
+		logName:       logName,
+		LogDataChan:   make(chan *LogData, chanSize),
+		logSplitSize:  logSplitSize,
+		logSplitType:  logSplitType,
+		lastSplitHour: time.Now().Hour(),
 	}
 	logger.init()
 	return
@@ -76,12 +105,106 @@ func (f *FileLogger) init() {
 	go f.writeLogBackground()
 }
 
+func (f *FileLogger) splitFileHour(warnFile bool) {
+	now := time.Now()
+	hour := now.Hour()
+	if hour == f.lastSplitHour {
+		return
+	}
+	var backupFilename string
+	var filename string
+	if warnFile {
+		backupFilename = fmt.Sprintf("%s/%s.log.wf_%04d%02d%02d%02d",
+			f.logPath, f.logName, now.Year(), now.Month(), now.Day(), f.lastSplitHour)
+		filename = fmt.Sprintf("%s/%s.log.wf", f.logPath, f.logName)
+	} else {
+		backupFilename = fmt.Sprintf("%s/%s.log_%04d%02d%02d%02d",
+			f.logPath, f.logName, now.Year(), now.Month(), now.Day(), f.lastSplitHour)
+		filename = fmt.Sprintf("%s/%s.log", f.logPath, f.logName)
+	}
+
+	file := f.file
+	if warnFile {
+		file = f.warnFile
+	}
+	file.Close()
+	os.Rename(filename, backupFilename)
+	f.lastSplitHour = time.Now().Hour()
+	var err error
+	file, err = os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0755)
+	if err != nil {
+		return
+	}
+	if warnFile {
+		f.warnFile = file
+	} else {
+		f.file = file
+	}
+}
+
+func (f *FileLogger) splitFileSize(warnFile bool) {
+
+	file := f.file
+	if warnFile {
+		file = f.warnFile
+	}
+
+	statInfo, err := file.Stat()
+	if err != nil {
+		return
+	}
+	fileSize := statInfo.Size()
+	if fileSize <= f.logSplitSize {
+		return
+	}
+
+	var backupFilename string
+	var filename string
+
+	now := time.Now()
+
+	if warnFile {
+		backupFilename = fmt.Sprintf("%s/%s.log.wf_%04d%02d%02d%02d%02d%02d",
+			f.logPath, f.logName, now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second())
+		filename = fmt.Sprintf("%s/%s.log.wf", f.logPath, f.logName)
+	} else {
+		backupFilename = fmt.Sprintf("%s/%s.log_%04d%02d%02d%02d%02d%02d",
+			f.logPath, f.logName, now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second())
+		filename = fmt.Sprintf("%s/%s.log", f.logPath, f.logName)
+	}
+
+	file.Close()
+	os.Rename(filename, backupFilename)
+
+	file, err = os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0755)
+	if err != nil {
+		return
+	}
+	if warnFile {
+		f.warnFile = file
+	} else {
+		f.file = file
+	}
+}
+
+func (f *FileLogger) checkSplitFile(warnFile bool) {
+	if f.logSplitType == LogSplitTypeHour {
+		f.splitFileHour(warnFile)
+		return
+	}
+	f.splitFileSize(warnFile)
+	return
+}
+
 func (f *FileLogger) writeLogBackground() {
 	for logData := range f.LogDataChan {
 		var file *os.File = f.file
 		if logData.WarnAndFatal {
 			file = f.warnFile
 		}
+
+		f.checkSplitFile(logData.WarnAndFatal)
+
 		fmt.Fprintf(file, "[%s] %s [%s:%s:%d] %s\n", logData.TimeStr, logData.LevelStr,
 			logData.FileName, logData.FuncName, logData.LineNo, logData.Message)
 

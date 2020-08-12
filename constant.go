@@ -8,3 +8,8 @@ const (
 	LogLevelError
 	LogLevelFatal
 )
+
+const (
+	LogSplitTypeHour = iota
+	LogSplitTypeSize
+)
